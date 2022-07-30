@@ -7,23 +7,26 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 
-public class ProducerActor extends AbstractBehavior<String> {
+public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
+    public static interface Command {}
 
     int count = 1;
-    static Behavior<String> create() {
+    static Behavior<Command> create() {
         return Behaviors.setup(ProducerActor::new);
     }
 
-    private ProducerActor(ActorContext<String> context) {
+    private ProducerActor(ActorContext<Command> context) {
         super(context);
     }
 
     @Override
-    public Receive<String> createReceive() {
-        return newReceiveBuilder().onMessageEquals("produce", this::produce).build();
+    public Receive<Command> createReceive() {
+        return newReceiveBuilder()
+        .onMessage(Command.class, this::produce)
+        .build();
     }
 
-    private Behavior<String> produce() {
+    private Behavior<Command> produce(Command request) {
         System.out.println("Producing");
         return this;
     }

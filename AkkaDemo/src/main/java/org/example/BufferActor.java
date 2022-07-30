@@ -1,39 +1,32 @@
 package org.example;
 
 import akka.actor.typed.ActorRef;
-import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.Props;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
-import com.typesafe.config.ConfigException;
+import akka.actor.typed.javadsl.*;
 
-public class BufferActor extends AbstractBehavior {
+public class BufferActor extends AbstractBehavior<BufferActor.BufferCommand> {
+    public static interface BufferCommand {}
 
-    static Behavior<String> create() {
+    public static class Consume implements BufferCommand {
+    }
+
+    public static class Produce implements BufferCommand {
+    }
+
+    static Behavior<BufferCommand> create() {
         return Behaviors.setup(BufferActor::new);
     }
 
-    private BufferActor(akka.actor.typed.javadsl.ActorContext<String> context) {
+
+    private BufferActor(akka.actor.typed.javadsl.ActorContext<BufferCommand> context) {
         super(context);
     }
 
     @Override
-    public Receive<String> createReceive() {
+    public Receive<BufferCommand> createReceive() {
         return newReceiveBuilder()
-          .onMessageEquals("start", this::start)
-          .onMessageEquals("addProduction", this::addProduction)
           .build();
-    }
-
-    private Behavior<String> start() {
-        ActorRef<String> producer = getContext().spawn(ProducerActor.create(), "producer");
-
-        System.out.println("Producer: " + producer);
-        producer.tell("produce");
-        return Behaviors.same();
     }
 
     private Behavior<String> addProduction() {
