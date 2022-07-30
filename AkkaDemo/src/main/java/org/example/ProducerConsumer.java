@@ -10,6 +10,13 @@ import akka.actor.typed.javadsl.*;
 
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
     public interface Command {}
+    public static enum RegisterProducer implements Command {
+        INSTANCE
+    }
+
+    public static enum RegisterConsumer implements Command {
+        INSTANCE
+    }
 
     private ActorRef<BufferCommand> buffer;
     private Map<Long, ActorRef<ProducerActor.Command>> producers;
@@ -48,7 +55,22 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
+        .onMessage(RegisterProducer.class, this::registerProducer)
+        .onMessage(RegisterConsumer.class, this::registerConsumer)
         .build();
     }
 
+    private Behavior<Command> registerProducer(RegisterProducer request) {
+        long i = producers.size()-1;
+        ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
+        producers.put(i, newProducer);
+        return this;
+    }
+
+    private Behavior<Command> registerConsumer(RegisterConsumer request) {
+        long i = consumers.size()-1;
+        ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);
+        consumers.put(i, newConsumer);
+        return this;
+    }
 }
