@@ -38,7 +38,8 @@ public class BoundedBuffer extends BufferActor {
             producer.tell(ProducerActor.RequestProduce.INSTANCE);
         }
 
-        // // wake up one of the rejected producer (may wake up a crashed producer)
+        // // wake up one of the rejected producer 
+        // // (may wake up a producer that never terminates/crashed producer)
         // if (!producersQueue.isEmpty()) {
         //     producersQueue.poll().tell(ProducerActor.RequestProduce.INSTANCE);
         // }
