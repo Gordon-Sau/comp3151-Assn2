@@ -12,6 +12,7 @@ public class BoundedBuffer extends BufferActor {
 
     private final Queue<Long> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
+    private final Queue<ActorRef<ProducerActor.Command>> producersQueue = new ArrayDeque<>();
     private final long maxSize;
 
     public static Behavior<BufferActor.BufferCommand> create(long bufferSize) {
@@ -25,32 +26,35 @@ public class BoundedBuffer extends BufferActor {
 
     @Override
     protected Behavior<BufferCommand> onConsume(Consume request) {
-        // if (buffer.isEmpty()) {
-        //     // cannot send to any consumer at the moment
-        //     consumersQueue.add(request.consumer);
-        // } else {
-        //     // get data from the buffer and send to the consumer
-        //     ActorRef<ConsumerActor.Msg> consumer = consumersQueue.poll();
-        //     consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
-        // }
+        // same as unbounded buffer
+        if (buffer.isEmpty()) {
+            consumersQueue.add(request.consumer);
+        } else {
+            request.consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
+        }
+
+        // wake up one of the rejected producer
+        if (!producersQueue.isEmpty()) {
+            producersQueue.poll().tell(ProducerActor.RequestProduce.INSTANCE);
+        }
 
         return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onProduce(Produce request) {
-        // if (consumersQueue.isEmpty()) {
-        //     // put in the buffer first
-        //     buffer.add(request.data);
-        // } else {
-        //     // just send to a consumer
-        //     ActorRef<ConsumerActor.Msg> consumer = consumersQueue.poll();
-        //     consumer.tell(new ConsumerActor.DataMsg(request.data));
-        // }
+        if (isBufferFull()) {
+            // reject as the buffer is full
+            request.producer.tell(ProducerActor.ProduceResponse.REJECT);
+            producersQueue.add(request.producer);
+        } else {
+            buffer.add(request.data);
+            request.producer.tell(ProducerActor.ProduceResponse.ACCEPT);
+        }
         return this;
     }
     
-    private boolean isFull() {
+    private boolean isBufferFull() {
         return buffer.size() >= maxSize;
     }
 }
