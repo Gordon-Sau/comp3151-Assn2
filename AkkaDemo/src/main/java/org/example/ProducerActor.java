@@ -24,11 +24,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private final ActorRef<BufferCommand> buffer;
-    // private static enum ProducerState {
-    //     SLEEP,
-    //     WAITING,
-    // }
-    // private ProducerState state = ProducerState.WAITING;
+    private long reqeustId = 0;
     private long data;
 
     public static Behavior<Command> create(ActorRef<BufferCommand> buffer) {
@@ -52,6 +48,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private void produceNext() {
+        this.reqeustId += 1;
         getContext().getLog().info("Producer {} is producing...", getContext().getSelf().path());
         this.data = new Random().nextLong();
         getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), this.data);
@@ -75,7 +72,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private void insertBuffer() {
-        buffer.tell(new BufferActor.Produce(getContext().getSelf(), this.data));
+        buffer.tell(new BufferActor.Produce(getContext().getSelf(), this.reqeustId , this.data));
     }
 
 }

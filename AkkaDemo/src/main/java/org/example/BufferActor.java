@@ -17,9 +17,11 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
 
     public static class Produce implements BufferCommand {
         public ActorRef<ProducerActor.Command> producer;
+        public long requestId;
         public long data;
-        public Produce(ActorRef<ProducerActor.Command> producer, long data) {
+        public Produce(ActorRef<ProducerActor.Command> producer, long requestId, long data) {
             this.producer = producer;
+            this.requestId = requestId;
             this.data = data;
         }
     }
