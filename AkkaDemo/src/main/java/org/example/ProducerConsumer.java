@@ -13,10 +13,6 @@ import akka.actor.typed.javadsl.*;
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
     public interface Command {}
 
-    public static enum StartProducerConsumerReqeust implements Command, ConsumerActor.Msg {
-        INSTANCE
-    }
-
     private ActorRef<BufferCommand> buffer;
     private Map<Long, ActorRef<ProducerActor.Command>> producers;
     private Map<Long, ActorRef<ConsumerActor.Msg>> consumers;
@@ -53,16 +49,7 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
-        .onMessage(StartProducerConsumerReqeust.class, this::start)
         .build();
     }
 
-    private ProducerConsumer start(StartProducerConsumerReqeust reqeust) {
-        // TODO: tell the actors to start consuming
-        for (ActorRef<ConsumerActor.Msg> consumer : consumers.values()) {
-            consumer.tell(reqeust);
-        }
-
-        return this;
-    }
 }
