@@ -5,32 +5,37 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.*;
 
-public class BufferActor extends AbstractBehavior<BufferActor.BufferCommand> {
+public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCommand> {
     public static interface BufferCommand {}
 
     public static class Consume implements BufferCommand {
+        public ActorRef<ConsumerActor.Msg> consumer;
+        public Consume(ActorRef<ConsumerActor.Msg> consumer) {
+            this.consumer = consumer;
+        }
     }
 
     public static class Produce implements BufferCommand {
+        public ActorRef<ProducerActor.Command> producer;
+        public long data;
+        public Produce(ActorRef<ProducerActor.Command> producer, long data) {
+            this.producer = producer;
+            this.data = data;
+        }
     }
 
-    static Behavior<BufferCommand> create() {
-        return Behaviors.setup(BufferActor::new);
-    }
-
-
-    private BufferActor(akka.actor.typed.javadsl.ActorContext<BufferCommand> context) {
+    protected BufferActor(akka.actor.typed.javadsl.ActorContext<BufferCommand> context) {
         super(context);
     }
 
     @Override
     public Receive<BufferCommand> createReceive() {
         return newReceiveBuilder()
-          .build();
+        .onMessage(Consume.class, this::onConsume)
+        .onMessage(Produce.class, this::onProduce)
+        .build();
     }
 
-    private Behavior<String> addProduction() {
-        System.out.println("Adding production");
-        return Behaviors.same();
-    }
+    protected abstract Behavior<BufferCommand> onConsume(Consume request);
+    protected abstract Behavior<BufferCommand> onProduce(Produce request);
 }
