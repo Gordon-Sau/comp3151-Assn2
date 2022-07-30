@@ -1,9 +1,7 @@
 package org.example;
 
 import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.Queue;
-import java.util.Set;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -14,27 +12,45 @@ public class BoundedBuffer extends BufferActor {
 
     private final Queue<Long> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
-    private final Set<ActorRef<ProducerActor.Command>> producers;
     private final long maxSize;
 
-    public static Behavior<BufferActor.BufferCommand> create(Set<ActorRef<ProducerActor.Command>> producers, long bufferSize) {
-        return Behaviors.setup(context -> new BoundedBuffer(context, producers, bufferSize));
+    public static Behavior<BufferActor.BufferCommand> create(long bufferSize) {
+        return Behaviors.setup(context -> new BoundedBuffer(context, bufferSize));
     }
 
-    private BoundedBuffer(ActorContext<BufferCommand> context, Set<ActorRef<ProducerActor.Command>> producers, long bufferSize) {
+    private BoundedBuffer(ActorContext<BufferCommand> context, long bufferSize) {
         super(context);
         this.maxSize = bufferSize;
-        this.producers = new HashSet<>(producers);
     }
 
     @Override
     protected Behavior<BufferCommand> onConsume(Consume request) {
-        return null;
+        // if (buffer.isEmpty()) {
+        //     // cannot send to any consumer at the moment
+        //     consumersQueue.add(request.consumer);
+        // } else {
+        //     // get data from the buffer and send to the consumer
+        //     ActorRef<ConsumerActor.Msg> consumer = consumersQueue.poll();
+        //     consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
+        // }
+
+        return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onProduce(Produce request) {
-        return null;
+        // if (consumersQueue.isEmpty()) {
+        //     // put in the buffer first
+        //     buffer.add(request.data);
+        // } else {
+        //     // just send to a consumer
+        //     ActorRef<ConsumerActor.Msg> consumer = consumersQueue.poll();
+        //     consumer.tell(new ConsumerActor.DataMsg(request.data));
+        // }
+        return this;
     }
     
+    private boolean isFull() {
+        return buffer.size() >= maxSize;
+    }
 }

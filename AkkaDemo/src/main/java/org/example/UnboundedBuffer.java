@@ -14,15 +14,13 @@ public class UnboundedBuffer extends BufferActor {
 
     private final Queue<Long> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
-    private final Set<ActorRef<ProducerActor.Command>> producers;
 
-    public static Behavior<BufferActor.BufferCommand> create(Set<ActorRef<ProducerActor.Command>> producers) {
-        return Behaviors.setup(context -> new UnboundedBuffer(context, producers));
+    public static Behavior<BufferActor.BufferCommand> create() {
+        return Behaviors.setup(context -> new UnboundedBuffer(context));
     }
 
-    private UnboundedBuffer(ActorContext<BufferCommand> context, Set<ActorRef<ProducerActor.Command>> producers) {
+    private UnboundedBuffer(ActorContext<BufferCommand> context) {
         super(context);
-        this.producers = new HashSet<>(producers); // copy constructor (no shared memory)
     }
 
     @Override

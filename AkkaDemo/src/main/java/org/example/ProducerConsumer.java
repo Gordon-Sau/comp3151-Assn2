@@ -25,18 +25,19 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         nProducers = Math.max(1, nProducers);
         nConsumers = Math.max(1, nConsumers);
         bufferSize = Math.max(0, bufferSize);
-
+        
         // spawn producer, consumer and buffer actors
-        for (long i = 0; i < nProducers; i++) {
-            ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(), "producer-" + i);
-            producers.put(i, newProducer);
-        }
 
         if (bufferSize == 0) {
             // spawn unbounded buffer when buffersize is 0
-            buffer = getContext().spawn(UnboundedBuffer.create(new HashSet<>(producers.values())), "unbounded-buffer");
+            buffer = getContext().spawn(UnboundedBuffer.create(), "unbounded-buffer");
         } else {
-            buffer = getContext().spawn(BoundedBuffer.create(new HashSet<>(producers.values()), bufferSize), "bounded-buffer");
+            buffer = getContext().spawn(BoundedBuffer.create(bufferSize), "bounded-buffer");
+        }
+
+        for (long i = 0; i < nProducers; i++) {
+            ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
+            producers.put(i, newProducer);
         }
 
         for (long i = 0; i < nConsumers; i++) {

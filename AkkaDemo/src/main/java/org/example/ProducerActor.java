@@ -1,5 +1,9 @@
 package org.example;
 
+import java.util.Random;
+
+import org.example.BufferActor.BufferCommand;
+
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
@@ -10,24 +14,68 @@ import akka.actor.typed.javadsl.Receive;
 public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     public static interface Command {}
 
-    int count = 1;
-    static Behavior<Command> create() {
-        return Behaviors.setup(ProducerActor::new);
+    public static enum ProduceResponse implements Command {
+        ACCEPT,
+        REJECT
     }
 
-    private ProducerActor(ActorContext<Command> context) {
+    public static enum RequestProduce implements Command {
+        INSTANCE
+    }
+
+    private final ActorRef<BufferCommand> buffer;
+    // private static enum ProducerState {
+    //     SLEEP,
+    //     WAITING,
+    // }
+    // private ProducerState state = ProducerState.WAITING;
+    private long data;
+
+    public static Behavior<Command> create(ActorRef<BufferCommand> buffer) {
+        return Behaviors.setup(context -> new ProducerActor(context, buffer));
+    }
+
+    private ProducerActor(ActorContext<Command> context, ActorRef<BufferCommand> buffer) {
         super(context);
+        this.buffer = buffer;
+        produceNext();
+        insertBuffer(); // try to insert to the buffer when started
     }
 
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
-        .onMessage(Command.class, this::produce)
+        .onMessageEquals(ProduceResponse.ACCEPT, this::accept)
+        .onMessageEquals(ProduceResponse.REJECT, this::reject)
+        .onMessage(RequestProduce.class, context -> this.requestProduce())
         .build();
     }
 
-    private Behavior<Command> produce(Command request) {
-        System.out.println("Producing");
+    private void produceNext() {
+        getContext().getLog().info("Producer {} is producing...", getContext().getSelf().path());
+        this.data = new Random().nextLong();
+        getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), this.data);
+    }
+
+    private Behavior<Command> accept() {
+        // last request is accepted, produce the next thing
+        produceNext();
+        insertBuffer();
         return this;
     }
+
+    private Behavior<Command> reject() {
+        // do nothing, wake up until the buffer requestProduce
+        return this;
+    }
+
+    private Behavior<Command> requestProduce() {
+        insertBuffer(); // re-insert the last element since we failed last time
+        return this;
+    }
+
+    private void insertBuffer() {
+        buffer.tell(new BufferActor.Produce(getContext().getSelf(), this.data));
+    }
+
 }
