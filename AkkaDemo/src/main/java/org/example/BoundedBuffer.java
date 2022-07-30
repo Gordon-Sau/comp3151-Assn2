@@ -33,10 +33,15 @@ public class BoundedBuffer extends BufferActor {
             request.consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
         }
 
-        // wake up one of the rejected producer
-        if (!producersQueue.isEmpty()) {
-            producersQueue.poll().tell(ProducerActor.RequestProduce.INSTANCE);
+        // wake up all rejected producers
+        for (ActorRef<ProducerActor.Command> producer: producersQueue) {
+            producer.tell(ProducerActor.RequestProduce.INSTANCE);
         }
+
+        // // wake up one of the rejected producer (may wake up a crashed producer)
+        // if (!producersQueue.isEmpty()) {
+        //     producersQueue.poll().tell(ProducerActor.RequestProduce.INSTANCE);
+        // }
 
         return this;
     }
