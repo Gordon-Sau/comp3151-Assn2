@@ -1,9 +1,7 @@
 package org.example;
 
 import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.Queue;
-import java.util.Set;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -25,12 +23,32 @@ public class UnboundedBuffer extends BufferActor {
 
     @Override
     protected Behavior<BufferCommand> onConsume(Consume request) {
-        return null;
+        // if the buffer is empty put the consumer in the waiting queue
+        if (buffer.isEmpty()) {
+            consumersQueue.add(request.consumer);
+        } else {
+            request.consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
+        }
+        return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onProduce(Produce request) {
-        return null;
+        // Since the buffer is unbounded,
+        // just put the data in the queue/ send the data to a consumer
+        // and send Accept to the producer
+        if (consumersQueue.isEmpty()) {
+            buffer.add(request.data);
+        } else {
+            consumersQueue.poll().tell(new ConsumerActor.DataMsg(request.data));
+        }
+        request.producer.tell(ProducerActor.ProduceResponse.ACCEPT);
+        return this;
+
+        // NOTE:
+        // producer can be implemented more efficient if the producer do not worry 
+        // about crashes in the buffer. Producer can keep producing without waiting
+        // for Accept
     }
     
 }
