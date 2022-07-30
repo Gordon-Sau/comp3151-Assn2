@@ -1,5 +1,11 @@
 package org.example;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.function.Consumer;
+
+import org.example.BufferActor.BufferCommand;
+
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
@@ -7,10 +13,13 @@ import akka.actor.typed.javadsl.*;
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
     public interface Command {}
 
-    public static enum StartProducerConsumerReqeust implements Command {
+    public static enum StartProducerConsumerReqeust implements Command, ConsumerActor.Msg {
         INSTANCE
     }
 
+    private ActorRef<BufferCommand> buffer;
+    private Map<Long, ActorRef<ProducerActor.Command>> producers;
+    private Map<Long, ActorRef<ConsumerActor.Msg>> consumers;
 
     public static Behavior<Command> create(long nProducers, long nConsumers, long bufferSize) {
         return Behaviors.setup(context -> new ProducerConsumer(context, nProducers, nConsumers, bufferSize));
@@ -22,7 +31,23 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         nConsumers = Math.max(1, nConsumers);
         bufferSize = Math.max(0, bufferSize);
 
-        // TODO: spawn producer, consumer and buffer actors
+        // spawn producer, consumer and buffer actors
+        for (long i = 0; i < nProducers; i++) {
+            ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(), "producer-" + i);
+            producers.put(i, newProducer);
+        }
+
+        if (bufferSize == 0) {
+            // spawn unbounded buffer when buffersize is 0
+            buffer = getContext().spawn(UnboundedBuffer.create(new HashSet<>(producers.values())), "unbounded-buffer");
+        } else {
+            buffer = getContext().spawn(BoundedBuffer.create(new HashSet<>(producers.values()), bufferSize), "bounded-buffer");
+        }
+
+        for (long i = 0; i < nConsumers; i++) {
+            ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);
+            consumers.put(i, newConsumer);
+        }
     }
 
     @Override
@@ -33,7 +58,10 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
     }
 
     private ProducerConsumer start(StartProducerConsumerReqeust reqeust) {
-        // TODO: tell the actors to start producing and consuming
+        // TODO: tell the actors to start consuming
+        for (ActorRef<ConsumerActor.Msg> consumer : consumers.values()) {
+            consumer.tell(reqeust);
+        }
 
         return this;
     }
