@@ -11,6 +11,19 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 
+/*
+ * Problems with this protocol: The ProducerActor needs to wait for a response
+ * from the buffer, which is basically blocking. It harms performance as Producer
+ * should be producing in parallel instead of waiting and doing nothing.
+ * - We may use a poll-based protocol instead of a push-based protocol. Produce 
+ * as much as the number of requests. And stop producing until new requests comes.
+ * This is hard to implement polling correctly in a multiple producer scenerio.
+ * - We may use a local buffer for unacknowledged data for better parallelism 
+ * and block when the local buffer is full. The producer may still do nothing
+ * while it should be producing. Yet, this situatuion is less likely when the rate
+ * of producing and consuming is similar, as the producer can produce to the 
+ * local buffer.
+ */
 public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     public static interface Command {}
 
