@@ -18,12 +18,17 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
     public static class Produce implements BufferCommand {
         public ActorRef<ProducerActor.Command> producer;
         public long requestId;
-        public long data;
-        public Produce(ActorRef<ProducerActor.Command> producer, long requestId, long data) {
+        public String data;
+        public Produce(ActorRef<ProducerActor.Command> producer, long requestId, String data) {
             this.producer = producer;
             this.requestId = requestId;
             this.data = data;
         }
+    }
+
+    // The producer tells the buffer that it has finished producing
+    public static enum Finish implements BufferCommand {
+        INSTANCE
     }
 
     public static class RegisterProducer implements BufferCommand {
@@ -43,10 +48,12 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
         .onMessage(RegisterProducer.class, this::onRegisterProducer)
         .onMessage(Consume.class, this::onConsume)
         .onMessage(Produce.class, this::onProduce)
+        .onMessage(Finish.class, this::onFinish)
         .build();
     }
 
     protected abstract Behavior<BufferCommand> onConsume(Consume request);
     protected abstract Behavior<BufferCommand> onProduce(Produce request);
     protected abstract Behavior<BufferCommand> onRegisterProducer(RegisterProducer request);
+    protected abstract Behavior<BufferCommand> onFinish(Finish request);
 }
