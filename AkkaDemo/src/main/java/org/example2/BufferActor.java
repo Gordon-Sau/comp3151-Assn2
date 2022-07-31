@@ -36,8 +36,6 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
         }
     }
 
-    protected Queue<ActorRef<ProducerActor.Command>> producers = new ArrayDeque<>();
-
     protected BufferActor(akka.actor.typed.javadsl.ActorContext<BufferCommand> context) {
         super(context);
     }
@@ -53,8 +51,5 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
 
     protected abstract Behavior<BufferCommand> onConsume(Consume request);
     protected abstract Behavior<BufferCommand> onProduce(Produce request);
-    protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
-        producers.add(request.producer);
-        return this;
-    }
+    protected abstract Behavior<BufferCommand> onRegisterProducer(RegisterProducer request);
 }
