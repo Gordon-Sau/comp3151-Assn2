@@ -10,7 +10,7 @@ import akka.actor.typed.javadsl.Behaviors;
 
 public class UnboundedBuffer extends BufferActor {
 
-    private final Queue<Long> buffer = new ArrayDeque<>();
+    private final Queue<String> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
 
     public static Behavior<BufferActor.BufferCommand> create() {
@@ -49,6 +49,12 @@ public class UnboundedBuffer extends BufferActor {
     @Override
     protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
         request.producer.tell(ProducerActor.RequestProduce.INSTANCE);
+        return this;
+    }
+
+    @Override
+    protected Behavior<BufferCommand> onFinish(Finish request) {
+        // just don't send any request to that producer again
         return this;
     }
 }
