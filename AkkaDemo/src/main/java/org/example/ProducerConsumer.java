@@ -8,6 +8,25 @@ import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
 
+
+/*
+ * Problems with this protocol: 
+ * - The ProducerActor needs to wait for a response from the buffer, which is 
+ * basically blocking. It harms performance as Producer can actually produce
+ *  in parallel instead of waiting and doing nothing.
+ * - A lot of unneessary messages sending. The buffer needs to send a message to * reject the insertion for every insertion request when the buffer is full. The * producers needs to resend the message, which causes overhead.
+ * Solutions to the above problems:
+ * - We may use a poll-based protocol instead of a push-based protocol. Produce 
+ * as much as the number of requests. And stop producing until new requests comes.
+ * This solves the second problem as we don't have to resend and the buffer do 
+ * not have to respond with a reject or accept.
+ * - We may use another buffer for each producer for better parallelism. The 
+ * producer blocks when its buffer when is full. The producer may still do nothing
+ * while it can still produce. Yet, this situatuion is less likely when the rate
+ * of producing and consuming is similar, as the producer can produce to the 
+ * local buffer. We basically treat the buffer as the consumer of the extra 
+ * buffers and the producer be the producer of its extra buffer.
+ */
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
     public interface Command {}
     public static enum RegisterProducer implements Command {
