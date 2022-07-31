@@ -57,6 +57,13 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
             buffer.tell(new BufferActor.Finish(getContext().getSelf()));
         }
         return this;
+
+        // We technically have memory leak as we are not destorying this actor
+        // after it has finished producing. The better way would be using `watch`
+        // in `BoundedBuffer` to get a signal when producer terminates. It 
+        // would be harder to implement as the BoundedBuffer needs to keep tracks
+        // of all the `RequestProduce` and remove all of the requests from the 
+        // terminated producer.
     }
 
     private String generateData() {
