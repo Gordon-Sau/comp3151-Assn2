@@ -46,4 +46,9 @@ public class UnboundedBuffer extends BufferActor {
         return this;
     }
     
+    @Override
+    protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
+        request.producer.tell(ProducerActor.RequestProduce.INSTANCE);
+        return this;
+    }
 }
