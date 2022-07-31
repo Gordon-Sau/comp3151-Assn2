@@ -10,10 +10,11 @@ import akka.actor.typed.javadsl.Behaviors;
 
 public class BoundedBuffer extends BufferActor {
 
-    private final Queue<Long> buffer = new ArrayDeque<>();
+    private final Queue<String> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
     private final Queue<ActorRef<ProducerActor.Command>> producersQueue = new ArrayDeque<>();
     private final long maxSize;
+    private long outDeficit = 0; // number of ProduceRequest that have sent out but have not received a response
 
     public static Behavior<BufferActor.BufferCommand> create(long bufferSize) {
         return Behaviors.setup(context -> new BoundedBuffer(context, bufferSize));
@@ -33,40 +34,35 @@ public class BoundedBuffer extends BufferActor {
             request.consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
         }
 
-        // wake up all rejected producers
-        for (ActorRef<ProducerActor.Command> producer: producersQueue) {
-            producer.tell(ProducerActor.RequestProduce.INSTANCE);
-        }
-
-        // // wake up one of the rejected producer 
-        // // (may wake up a producer that never terminates/crashed producer)
-        // if (!producersQueue.isEmpty()) {
-        //     producersQueue.poll().tell(ProducerActor.RequestProduce.INSTANCE);
-        // }
+        // TODO: request a producer
 
         return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onProduce(Produce request) {
-        if (isBufferFull()) {
-            // reject as the buffer is full
-            // request.producer.tell(ProducerActor.ProduceResponse.REJECT);
-            producersQueue.add(request.producer);
-        } else {
+        producersQueue.add(request.producer);
+        if (consumersQueue.isEmpty()) {
             buffer.add(request.data);
-            // request.producer.tell(ProducerActor.ProduceResponse.ACCEPT);
+        } else {
+            consumersQueue.poll().tell(new ConsumerActor.DataMsg(request.data));
         }
         return this;
     }
     
-    private boolean isBufferFull() {
-        return buffer.size() >= maxSize;
+    private boolean isFull() {
+        return buffer.size() + outDeficit >= maxSize;
     }
 
     @Override
     protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
-        // TODO Auto-generated method stub
+        // request the producer
+        return this;
+    }
+
+    @Override
+    protected Behavior<BufferCommand> onFinish(Finish request) {
+        // do not request the producer anymore
         return this;
     }
 }
