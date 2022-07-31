@@ -1,7 +1,5 @@
 package org.example2;
 
-import java.util.Random;
-
 import org.example2.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
@@ -20,8 +18,8 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private final ActorRef<BufferCommand> buffer;
-    private long reqeustId = 0;
-    private long data;
+    private long requestId = 0;
+    private final long nData;
 
     public static Behavior<Command> create(ActorRef<BufferCommand> buffer) {
         return Behaviors.setup(context -> new ProducerActor(context, buffer));
@@ -30,8 +28,13 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     private ProducerActor(ActorContext<Command> context, ActorRef<BufferCommand> buffer) {
         super(context);
         this.buffer = buffer;
-        produceNext();
-        insertBuffer(); // try to insert to the buffer when started
+        this.nData = 0; // 0 means infinite stream
+    }
+
+    private ProducerActor(ActorContext<Command> context, ActorRef<BufferCommand> buffer, long nData) {
+        super(context);
+        this.buffer = buffer;
+        this.nData = Math.abs(nData);
     }
 
     @Override
@@ -41,20 +44,24 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
         .build();
     }
 
-    private void produceNext() {
-        this.reqeustId += 1;
-        getContext().getLog().info("Producer {} is producing...", getContext().getSelf().path());
-        this.data = new Random().nextLong();
-        getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), this.data);
-    }
-
     private Behavior<Command> requestProduce() {
-        insertBuffer(); // re-insert the last element since we failed last time
+        if (nData == 0 || requestId < nData) {
+            // generate data
+            String data = generateData();
+            // insert to the buffer
+            buffer.tell(new BufferActor.Produce(getContext().getSelf(), requestId, data));
+            // update request id
+            requestId++;
+        } else {
+            // signal the buffer that the producer has finished producing
+            buffer.tell(BufferActor.Finish.INSTANCE);
+        }
         return this;
     }
 
-    private void insertBuffer() {
-        buffer.tell(new BufferActor.Produce(getContext().getSelf(), this.reqeustId , this.data));
+    private String generateData() {
+        String data = getContext().getSelf().path().name() + ' ' + requestId;
+        getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), data);
+        return data;
     }
-
 }
