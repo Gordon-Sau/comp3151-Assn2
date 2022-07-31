@@ -63,4 +63,10 @@ public class BoundedBuffer extends BufferActor {
     private boolean isBufferFull() {
         return buffer.size() >= maxSize;
     }
+
+    @Override
+    protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
+        // TODO Auto-generated method stub
+        return this;
+    }
 }
