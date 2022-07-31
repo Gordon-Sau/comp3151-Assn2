@@ -1,5 +1,6 @@
 package org.example;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.example.BufferActor.BufferCommand;
@@ -38,8 +39,8 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
     }
 
     private ActorRef<BufferCommand> buffer;
-    private Map<Long, ActorRef<ProducerActor.Command>> producers;
-    private Map<Long, ActorRef<ConsumerActor.Msg>> consumers;
+    private Map<Long, ActorRef<ProducerActor.Command>> producers = new HashMap<>();
+    private Map<Long, ActorRef<ConsumerActor.Msg>> consumers = new HashMap<>();
 
     public static Behavior<Command> create(long nProducers, long nConsumers, long bufferSize) {
         return Behaviors.setup(context -> new ProducerConsumer(context, nProducers, nConsumers, bufferSize));
