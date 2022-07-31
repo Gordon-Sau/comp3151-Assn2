@@ -1,8 +1,5 @@
 package org.example2;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
