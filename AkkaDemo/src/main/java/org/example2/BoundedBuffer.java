@@ -34,19 +34,23 @@ public class BoundedBuffer extends BufferActor {
             request.consumer.tell(new ConsumerActor.DataMsg(buffer.poll()));
         }
 
-        // TODO: request a producer
+        // request a producer if a consumer consumes from the buffer (2nd case)
+        requestProducersUntilFull();
 
         return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onProduce(Produce request) {
-        producersQueue.add(request.producer);
+        outDeficit--;
         if (consumersQueue.isEmpty()) {
             buffer.add(request.data);
         } else {
             consumersQueue.poll().tell(new ConsumerActor.DataMsg(request.data));
         }
+        // Note: 
+        // the loop will only run once if a consumer consumes data (2nd case)
+        requestProducersUntilFull();
         return this;
     }
     
@@ -56,13 +60,46 @@ public class BoundedBuffer extends BufferActor {
 
     @Override
     protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
-        // request the producer
+        producersQueue.add(request.producer);
+        // Note: the loop will only run for the first producer
+        // to fill up the buffer
+        requestProducersUntilFull();
         return this;
     }
 
     @Override
     protected Behavior<BufferCommand> onFinish(Finish request) {
         // do not request the producer anymore
+        outDeficit--;
+        producersQueue.remove(request.producer);
         return this;
+    }
+
+    private void requestOneProducer() {
+        if (producersQueue.isEmpty()) {
+            return;
+        }
+        // Use queue to ensure that everyone has the chance to produce 
+        // (eventual entry if every producer response to its request eventually)
+
+        // Drawbacks: It is possible that we are waiting for some producers for 
+        // too long, and the parallelism is lost as other producers needs to wait 
+        // for these producers to produce first before receiving a RequestProduce
+        // and have the chance to produce.
+        ActorRef<ProducerActor.Command> producer = producersQueue.poll();
+        producer.tell(ProducerActor.RequestProduce.INSTANCE);
+        producersQueue.add(producer);
+        outDeficit++;
+        // One may use a different scheduling strategy 
+        // (e.g. prioirity based on previous throughput)
+    }
+
+    private void requestProducersUntilFull() {
+        if (producersQueue.isEmpty()) {
+            return;
+        }
+        while (!isFull()) {
+            requestOneProducer();
+        }
     }
 }
