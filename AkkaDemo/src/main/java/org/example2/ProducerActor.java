@@ -54,7 +54,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
             requestId++;
         } else {
             // signal the buffer that the producer has finished producing
-            buffer.tell(BufferActor.Finish.INSTANCE);
+            buffer.tell(new BufferActor.Finish(getContext().getSelf()));
         }
         return this;
     }

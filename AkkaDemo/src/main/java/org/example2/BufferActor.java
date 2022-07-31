@@ -27,8 +27,11 @@ public abstract class BufferActor extends AbstractBehavior<BufferActor.BufferCom
     }
 
     // The producer tells the buffer that it has finished producing
-    public static enum Finish implements BufferCommand {
-        INSTANCE
+    public static class Finish implements BufferCommand {
+        public ActorRef<ProducerActor.Command> producer;
+        public Finish(ActorRef<ProducerActor.Command> producer) {
+            this.producer = producer;
+        }
     }
 
     public static class RegisterProducer implements BufferCommand {
