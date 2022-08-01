@@ -10,8 +10,11 @@ import akka.actor.typed.javadsl.Behaviors;
 
 public class BoundedBuffer extends BufferActor {
 
+    // stores the actual data
     private final Queue<String> buffer = new ArrayDeque<>();
+    // keep track of the consumers that are ready for receiving data
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
+    // keep track of the producers it can request
     private final Queue<ActorRef<ProducerActor.Command>> producersQueue = new ArrayDeque<>();
     private final long maxSize;
     private long outDeficit = 0; // number of ProduceRequest that have sent out but have not received a response
@@ -70,7 +73,7 @@ public class BoundedBuffer extends BufferActor {
     @Override
     protected Behavior<BufferCommand> onFinish(Finish request) {
         // do not request the producer anymore
-        outDeficit--;
+        outDeficit--; // receive response
         producersQueue.remove(request.producer);
         return this;
     }
@@ -88,10 +91,14 @@ public class BoundedBuffer extends BufferActor {
         // and have the chance to produce.
         ActorRef<ProducerActor.Command> producer = producersQueue.poll();
         producer.tell(ProducerActor.RequestProduce.INSTANCE);
+        // put the producer back to the end of the queue
         producersQueue.add(producer);
-        outDeficit++;
-        // One may use a different scheduling strategy 
-        // (e.g. prioirity based on previous throughput)
+        outDeficit++; // create request
+
+        // One may use a different scheduling strategy for better parallelism
+        // e.g. prioirity based on previous throughput,
+        // partition the buffer so that every producer contains a fixed amount of
+        // isolated buffer
     }
 
     private void requestProducersUntilFull() {
