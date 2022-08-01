@@ -1,6 +1,8 @@
 package org.pull;
 
 import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 
 import akka.actor.typed.ActorRef;
@@ -12,6 +14,7 @@ public class BoundedBuffer extends BufferActor {
 
     // stores the actual data
     private final Queue<String> buffer = new ArrayDeque<>();
+    private final Map<ActorRef<ProducerActor.Command>, String> producerBuffer = new HashMap<>();
     // keep track of the consumers that are ready for receiving data
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
     // keep track of the producers it can request
