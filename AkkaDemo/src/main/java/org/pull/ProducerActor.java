@@ -11,14 +11,16 @@ import akka.actor.typed.javadsl.Receive;
 
 
 public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
+    /* protocols */
     public static interface Command {}
 
     public static enum RequestProduce implements Command {
         INSTANCE
     }
 
+    /* local state */
     private final ActorRef<BufferCommand> buffer;
-    private long requestId = 0;
+    private long msgId = 0;
     private final long nData;
 
     public static Behavior<Command> create(ActorRef<BufferCommand> buffer) {
@@ -45,13 +47,13 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private Behavior<Command> requestProduce() {
-        if (nData == 0 || requestId < nData) {
+        if (nData == 0 || msgId < nData) {
             // generate data
             String data = generateData();
             // insert to the buffer
-            buffer.tell(new BufferActor.Produce(getContext().getSelf(), requestId, data));
+            buffer.tell(new BufferActor.Produce(getContext().getSelf(), msgId, data));
             // update request id
-            requestId++;
+            msgId++;
         } else {
             // signal the buffer that the producer has finished producing
             buffer.tell(new BufferActor.Finish(getContext().getSelf()));
@@ -67,7 +69,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private String generateData() {
-        String data = getContext().getSelf().path().name() + ' ' + requestId;
+        String data = getContext().getSelf().path().name() + ' ' + msgId;
         getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), data);
         return data;
     }
