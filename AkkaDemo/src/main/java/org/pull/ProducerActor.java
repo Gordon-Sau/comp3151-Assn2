@@ -21,10 +21,15 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     /* local state */
     private final ActorRef<BufferCommand> buffer;
     private long msgId = 0;
-    private final long nData;
+    private final long nData; // number of data the producer will produce
 
+    /* constructors */
     public static Behavior<Command> create(ActorRef<BufferCommand> buffer) {
         return Behaviors.setup(context -> new ProducerActor(context, buffer));
+    }
+
+    public static Behavior<Command> create(ActorRef<BufferCommand> buffer, long nData) {
+        return Behaviors.setup(context -> new ProducerActor(context, buffer, nData));
     }
 
     private ProducerActor(ActorContext<Command> context, ActorRef<BufferCommand> buffer) {
@@ -46,6 +51,7 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
         .build();
     }
 
+    /* Buffer reqeust new data from the producer */
     private Behavior<Command> requestProduce() {
         if (nData == 0 || msgId < nData) {
             // generate data
@@ -63,9 +69,9 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
         // We technically have memory leak as we are not destorying this actor
         // after it has finished producing. The better way would be using `watch`
         // in `BoundedBuffer` to get a signal when producer terminates. It 
-        // would be harder to implement as the BoundedBuffer needs to keep tracks
-        // of all the `RequestProduce` and remove all of the requests from the 
-        // terminated producer.
+        // would be more difficult to implement as the BoundedBuffer needs to 
+        // keep tracks of all the `RequestProduce` and remove all of the requests
+        // from the terminated producer.
     }
 
     private String generateData() {
