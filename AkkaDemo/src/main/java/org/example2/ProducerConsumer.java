@@ -14,6 +14,7 @@ import akka.actor.typed.javadsl.*;
  * producers to the buffer so the buffer can request the producer.
  */
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
+    /* communication protocols */
     public interface Command {}
     public static enum RegisterProducer implements Command {
         INSTANCE
@@ -23,11 +24,12 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         INSTANCE
     }
 
-
+    /* local state */
     private ActorRef<BufferCommand> buffer;
     private Map<Long, ActorRef<ProducerActor.Command>> producers = new HashMap<>();
     private Map<Long, ActorRef<ConsumerActor.Msg>> consumers = new HashMap<>();
 
+    /* constructor */
     public static Behavior<Command> create(long nProducers, long nConsumers, long bufferSize) {
         return Behaviors.setup(context -> new ProducerConsumer(context, nProducers, nConsumers, bufferSize));
     }
@@ -59,6 +61,7 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         }
     }
 
+    /* pattern matching on request and call the corresponding handler function */
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
@@ -67,6 +70,7 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         .build();
     }
 
+    /* create producer and register it to the buffer */
     private Behavior<Command> registerProducer(RegisterProducer request) {
         long i = producers.size()-1;
         ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
@@ -75,6 +79,7 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         return this;
     }
 
+    /* create a consumer, which consumes from the buffer */
     private Behavior<Command> registerConsumer(RegisterConsumer request) {
         long i = consumers.size()-1;
         ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);
