@@ -9,6 +9,7 @@ import akka.actor.typed.javadsl.*;
 public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
     public static interface Msg {}
     
+    /* a wrapper of the actual data */
     public static class DataMsg implements Msg {
         public final String data;
         public DataMsg(String data) {
@@ -21,7 +22,9 @@ public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
     private ConsumerActor(ActorContext<Msg> context, ActorRef<BufferActor.BufferCommand> buffer) {
         super(context);
         this.buffer = buffer;
-        requestConsume();
+        requestConsume(); 
+        // the consumer is ready at start up 
+        // as it is not doing anything at the moment
     }
 
     @Override
@@ -33,7 +36,7 @@ public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
 
     private Behavior<Msg> receiveMsg(DataMsg msg) {
         proceess(msg.data);
-        requestConsume();
+        requestConsume(); // consumer is ready for the next message
         return this;
     }
 
