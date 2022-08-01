@@ -1,6 +1,6 @@
-package org.example;
+package org.pull;
 
-import java.math.BigInteger;
+import java.util.Random;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -10,8 +10,8 @@ public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
     public static interface Msg {}
     
     public static class DataMsg implements Msg {
-        public final long data;
-        public DataMsg(long data) {
+        public final String data;
+        public DataMsg(String data) {
             this.data = data;
         }
     }
@@ -41,14 +41,14 @@ public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
         buffer.tell(new BufferActor.Consume(getContext().getSelf()));
     }
 
-    private void proceess(long data) {
-        getContext().getLog().info("Consumer {} is processing data: {}", getContext().getSelf().path(), data);
+    private void proceess(String data) {
         // some complex calculations
-        BigInteger result = BigInteger.ZERO;
-        for (int i = 0; i <= data; i++) {
-            result = result.add(BigInteger.valueOf(i).pow(3));
+        Random rand =  new Random();
+        long val = 2;
+        for (long i = 0; i < Math.abs(rand.nextLong()); i++) {
+            val = val*val;
         }
-        getContext().getLog().info("Consumer {} completes processing! The result is {}.", getContext().getSelf().path(), result);
+        getContext().getLog().info("Consumer {} consumes the data from {}.", getContext().getSelf().path(), data);
     }
 
     public static Behavior<ConsumerActor.Msg> create(ActorRef<BufferActor.BufferCommand> buffer) {

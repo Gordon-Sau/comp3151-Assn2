@@ -1,6 +1,6 @@
-package org.example2;
+package org.pull;
 
-import org.example2.BufferActor.BufferCommand;
+import org.pull.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;

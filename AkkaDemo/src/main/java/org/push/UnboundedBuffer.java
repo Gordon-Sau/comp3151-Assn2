@@ -1,4 +1,4 @@
-package org.example2;
+package org.push;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -10,7 +10,7 @@ import akka.actor.typed.javadsl.Behaviors;
 
 public class UnboundedBuffer extends BufferActor {
 
-    private final Queue<String> buffer = new ArrayDeque<>();
+    private final Queue<Long> buffer = new ArrayDeque<>();
     private final Queue<ActorRef<ConsumerActor.Msg>> consumersQueue = new ArrayDeque<>();
 
     public static Behavior<BufferActor.BufferCommand> create() {
@@ -36,25 +36,19 @@ public class UnboundedBuffer extends BufferActor {
     protected Behavior<BufferCommand> onProduce(Produce request) {
         // Since the buffer is unbounded,
         // just put the data in the queue/ send the data to a consumer
-        // and request the next output from the producer
+        // and send Accept to the producer
         if (consumersQueue.isEmpty()) {
             buffer.add(request.data);
         } else {
             consumersQueue.poll().tell(new ConsumerActor.DataMsg(request.data));
         }
-        request.producer.tell(ProducerActor.RequestProduce.INSTANCE);
+        request.producer.tell(ProducerActor.ProduceResponse.ACCEPT);
         return this;
+
+        // NOTE:
+        // producer can be implemented more efficient if the producer do not worry 
+        // about crashes in the buffer. Producer can keep producing without waiting
+        // for Accept
     }
     
-    @Override
-    protected Behavior<BufferCommand> onRegisterProducer(RegisterProducer request) {
-        request.producer.tell(ProducerActor.RequestProduce.INSTANCE);
-        return this;
-    }
-
-    @Override
-    protected Behavior<BufferCommand> onFinish(Finish request) {
-        // just don't send any request to that producer again
-        return this;
-    }
 }

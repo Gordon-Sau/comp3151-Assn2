@@ -1,20 +1,34 @@
-package org.example2;
+package org.push;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.example2.BufferActor.BufferCommand;
+import org.push.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
 
+
 /*
- * Poll-based algorithm: Buffer request from the producer. We need to register 
- * producers to the buffer so the buffer can request the producer.
+ * Problems with this protocol: 
+ * - The ProducerActor needs to wait for a response from the buffer, which is 
+ * basically blocking. It harms performance as Producer can actually produce
+ *  in parallel instead of waiting and doing nothing.
+ * - A lot of unneessary messages sending. The buffer needs to send a message to * reject the insertion for every insertion request when the buffer is full. The * producers needs to resend the message, which causes overhead.
+ * Solutions to the above problems:
+ * - We may use a poll-based protocol instead of a push-based protocol. Produce 
+ * as much as the number of requests. And stop producing until new requests comes.
+ * This solves the second problem as we don't have to resend and the buffer do 
+ * not have to respond with a reject or accept.
+ * - We may use another buffer for each producer for better parallelism. The 
+ * producer blocks when its buffer when is full. The producer may still do nothing
+ * while it can still produce. Yet, this situatuion is less likely when the rate
+ * of producing and consuming is similar, as the producer can produce to the 
+ * local buffer. We basically treat the buffer as the consumer of the extra 
+ * buffers and the producer be the producer of its extra buffer.
  */
 public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command> {
-    /* communication protocols */
     public interface Command {}
     public static enum RegisterProducer implements Command {
         INSTANCE
@@ -24,12 +38,10 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         INSTANCE
     }
 
-    /* local state */
     private ActorRef<BufferCommand> buffer;
     private Map<Long, ActorRef<ProducerActor.Command>> producers = new HashMap<>();
     private Map<Long, ActorRef<ConsumerActor.Msg>> consumers = new HashMap<>();
 
-    /* constructor */
     public static Behavior<Command> create(long nProducers, long nConsumers, long bufferSize) {
         return Behaviors.setup(context -> new ProducerConsumer(context, nProducers, nConsumers, bufferSize));
     }
@@ -52,7 +64,6 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         for (long i = 0; i < nProducers; i++) {
             ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
             producers.put(i, newProducer);
-            buffer.tell(new BufferActor.RegisterProducer(newProducer));
         }
 
         for (long i = 0; i < nConsumers; i++) {
@@ -61,7 +72,6 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         }
     }
 
-    /* pattern matching on request and call the corresponding handler function */
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
@@ -70,16 +80,13 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
         .build();
     }
 
-    /* create producer and register it to the buffer */
     private Behavior<Command> registerProducer(RegisterProducer request) {
         long i = producers.size()-1;
         ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
         producers.put(i, newProducer);
-        buffer.tell(new BufferActor.RegisterProducer(newProducer));
         return this;
     }
 
-    /* create a consumer, which consumes from the buffer */
     private Behavior<Command> registerConsumer(RegisterConsumer request) {
         long i = consumers.size()-1;
         ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);

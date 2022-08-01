@@ -1,8 +1,8 @@
-package org.example;
+package org.push;
 
 import java.util.Random;
 
-import org.example.BufferActor.BufferCommand;
+import org.push.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;

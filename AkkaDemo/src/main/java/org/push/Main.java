@@ -1,4 +1,4 @@
-package org.example;
+package org.push;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
