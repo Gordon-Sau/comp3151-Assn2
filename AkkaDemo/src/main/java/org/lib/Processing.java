@@ -16,6 +16,6 @@ public class Processing {
         } catch (InterruptedException e) {
             System.err.printf("%s: Sleep is interrupted\n", producer);
         }
-        return producer + seed;
+        return producer + ' ' + seed;
     }
 }
