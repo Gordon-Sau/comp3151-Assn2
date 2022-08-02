@@ -5,6 +5,7 @@ import org.pull.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
+import akka.actor.typed.PostStop;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
@@ -49,6 +50,13 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
         .onMessage(RequestProduce.class, context -> this.requestProduce())
+        .onSignal(PostStop.class, signal -> {
+            getContext().getLog().info(
+                "{} is terminated!", 
+                getContext().getSelf().path().name()
+            );
+            return Behaviors.same();
+        })
         .build();
     }
 
@@ -64,15 +72,11 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
         } else {
             // signal the buffer that the producer has finished producing
             buffer.tell(new BufferActor.Finish(getContext().getSelf()));
+            // we can terminate the process now as the consumers will not request
+            // this producer anymore
+            return Behaviors.stopped();
         }
         return this;
-
-        // We technically have memory leak as we are not destorying this actor
-        // after it has finished producing. The better way would be using `watch`
-        // in `BoundedBuffer` to get a signal when producer terminates. It 
-        // would be more difficult to implement as the BoundedBuffer needs to 
-        // keep tracks of all the `RequestProduce` and remove all of the requests
-        // from the terminated producer.
     }
 
     private String generateData() {

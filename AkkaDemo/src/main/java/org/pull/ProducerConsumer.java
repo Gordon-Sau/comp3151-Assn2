@@ -1,12 +1,10 @@
 package org.pull;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.pull.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
+import akka.actor.typed.Terminated;
 import akka.actor.typed.javadsl.*;
 
 /*
@@ -26,8 +24,8 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
 
     /* local state */
     private ActorRef<BufferCommand> buffer;
-    private Map<Long, ActorRef<ProducerActor.Command>> producers = new HashMap<>();
-    private Map<Long, ActorRef<ConsumerActor.Msg>> consumers = new HashMap<>();
+    private long nextProducerId = 0;
+    private long nextConsumerId = 0;
 
     /* constructor */
     public static Behavior<Command> create(long nProducers, long nConsumers, long bufferSize) {
@@ -49,41 +47,50 @@ public class ProducerConsumer extends AbstractBehavior<ProducerConsumer.Command>
             buffer = getContext().spawn(BoundedBuffer.create(bufferSize), "bounded-buffer");
         }
 
-        for (long i = 0; i < nProducers; i++) {
-            ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
-            producers.put(i, newProducer);
-            buffer.tell(new BufferActor.RegisterProducer(newProducer));
+        for (; nextProducerId < nProducers; nextProducerId++) {
+            registerProducer();
         }
 
-        for (long i = 0; i < nConsumers; i++) {
-            ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);
-            consumers.put(i, newConsumer);
+        for (; nextConsumerId < nConsumers; nextConsumerId++) {
+            registerConsumer();
         }
+    }
+
+    private ProducerConsumer(ActorContext<Command> context, long bufferSize) {
+        this(context, 0, 0, bufferSize);
     }
 
     /* pattern matching on request and call the corresponding handler function */
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
-        .onMessage(RegisterProducer.class, this::registerProducer)
-        .onMessage(RegisterConsumer.class, this::registerConsumer)
+        .onMessage(RegisterProducer.class, __ -> this.registerProducer())
+        .onMessage(RegisterConsumer.class, __ -> this.registerConsumer())
+        .onSignal(Terminated.class, this::onTerminated)
         .build();
     }
 
     /* create producer and register it to the buffer */
-    private Behavior<Command> registerProducer(RegisterProducer request) {
-        long i = producers.size()-1;
-        ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + i);
-        producers.put(i, newProducer);
+    private Behavior<Command> registerProducer() {
+        ActorRef<ProducerActor.Command> newProducer = getContext().spawn(ProducerActor.create(buffer), "producer-" + nextProducerId);
         buffer.tell(new BufferActor.RegisterProducer(newProducer));
+        getContext().watch(newProducer);
+        nextProducerId++;
         return this;
     }
 
     /* create a consumer, which consumes from the buffer */
-    private Behavior<Command> registerConsumer(RegisterConsumer request) {
-        long i = consumers.size()-1;
-        ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + i);
-        consumers.put(i, newConsumer);
+    private Behavior<Command> registerConsumer() {
+        ActorRef<ConsumerActor.Msg> newConsumer = getContext().spawn(ConsumerActor.create(buffer), "consumer-" + nextConsumerId);
+        getContext().watch(newConsumer);
+        nextConsumerId++;
+        return this;
+    }
+
+    /* onTerminated */
+    private Behavior<Command> onTerminated(Terminated request) {
+        ActorRef<Void> actor = request.getRef();
+        getContext().getLog().info("{} terminated!", actor.path().name());
         return this;
     }
 }
