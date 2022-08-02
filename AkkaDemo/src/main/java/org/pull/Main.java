@@ -5,6 +5,9 @@ import akka.actor.typed.ActorSystem;
 
 public class Main {
     public static void main(String[] args) {
-        ActorRef<ProducerConsumer.Command> producerConsumerActor = ActorSystem.create(ProducerConsumer.create(1,1, 10), "producer-consumer");
+        ActorRef<ProducerConsumer.Command> producerConsumerActor = ActorSystem.create(ProducerConsumer.create(0,0, 10), "producer-consumer");
+        producerConsumerActor.tell(new ProducerConsumer.RegisterProducer(5));
+        producerConsumerActor.tell(new ProducerConsumer.RegisterProducer(10));
+        producerConsumerActor.tell(new ProducerConsumer.RegisterConsumer(15));
     }
 }
