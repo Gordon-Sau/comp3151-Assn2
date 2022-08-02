@@ -1,5 +1,6 @@
 package org.pull;
 
+import org.lib.Processing;
 import org.pull.BufferActor.BufferCommand;
 
 import akka.actor.typed.ActorRef;
@@ -75,7 +76,9 @@ public class ProducerActor extends AbstractBehavior<ProducerActor.Command> {
     }
 
     private String generateData() {
-        String data = getContext().getSelf().path().name() + ' ' + msgId;
+        String myName = getContext().getSelf().path().name();
+        long producingTime = 1;
+        String data = Processing.producing(myName, msgId, producingTime);
         getContext().getLog().info("Producer {} produced {}", getContext().getSelf().path(), data);
         return data;
     }

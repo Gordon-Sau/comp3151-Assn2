@@ -1,7 +1,6 @@
 package org.pull;
 
-import java.util.Random;
-
+import org.lib.Processing;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
@@ -46,12 +45,9 @@ public class ConsumerActor extends AbstractBehavior<ConsumerActor.Msg> {
 
     private void proceess(String data) {
         // some complex calculations
-        Random rand =  new Random();
-        long val = 2;
-        for (long i = 0; i < Math.abs(rand.nextLong()); i++) {
-            val = val*val;
-        }
-        getContext().getLog().info("Consumer {} consumes the data from {}.", getContext().getSelf().path(), data);
+        long processingTime = 2;
+        String result = Processing.consuming(getContext().getSelf().path().name(), data, processingTime);
+        getContext().getLog().info("Consumer {} consumes the data from {}.", getContext().getSelf().path(), result);
     }
 
     public static Behavior<ConsumerActor.Msg> create(ActorRef<BufferActor.BufferCommand> buffer) {
