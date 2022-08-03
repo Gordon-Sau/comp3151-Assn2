@@ -2,6 +2,7 @@
 This project attempts to solve the producer consumer problem with `Java` using `Akka` library, which is based on the actor model. It is for educational purpose.
 
 ## Run Program
+Follow https://gradle.org/install/ to install gradle if you haven't install it already. Then, run the following command.
 ```bash
 cd AkkaDemo
 gradle run
