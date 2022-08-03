@@ -35,5 +35,10 @@ Note that `Akka` does not provide gurantees for assumptions 2 and 3. In practice
 
 - Use message id to identify duplicated messages (the process can ignore the new message with the same id)
 
+## Properties of the Pull Based Solution
+- A producer or a consumer can eventually produce or consume once the `Produce` or `Consume` is received by the buffer. 
+- The producer sleeps when the buffer is full. The consumer sleeps when the buffer is empty.
+- Producers can produce in parallel and consumers can consume in parallel.
+
 ## Notes
 We did not use "persistence", "timeout" or "ask" in our programs since we think these are more complicated, and are not fundamental to actor model.
